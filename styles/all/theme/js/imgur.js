@@ -21,10 +21,6 @@
 	}
 
 	// Global variables
-	var $contentBody = {
-		message: $('[name="message"]'),
-		signature: $('[name="signature"]')
-	};
 	var $outputList = [];
 	var $errors = [];
 	var $imgurStorage = {
@@ -64,7 +60,7 @@
 
 		// Restore user preference
 		if ($imgurStorage.enabled) {
-			if (window.localStorage.getItem($imgurStorage.local) !== null) {
+			if (window.localStorage.getItem($imgurStorage.local) !== 'null') {
 				$imgurButton.attr('data-output-type', window.localStorage.getItem($imgurStorage.local));
 			}
 		}
@@ -144,7 +140,7 @@
 
 				// Remove session data
 				if ($imgurStorage.enabled) {
-					if (window.sessionStorage.getItem($imgurStorage.session) !== null) {
+					if (window.sessionStorage.getItem($imgurStorage.session) !== 'null') {
 						window.sessionStorage.removeItem($imgurStorage.session);
 					}
 				}
@@ -187,7 +183,7 @@
 
 					// Save (and append) data to session
 					if ($imgurStorage.enabled) {
-						if (window.sessionStorage.getItem($imgurStorage.session) !== null) {
+						if (window.sessionStorage.getItem($imgurStorage.session) !== 'null') {
 							$outputList = JSON.parse(window.sessionStorage.getItem($imgurStorage.session));
 						}
 
@@ -210,13 +206,7 @@
 
 					// Add BBCode to content
 					if ($addOutput) {
-						for (var $k in $contentBody) {
-							if ($contentBody.hasOwnProperty($k)) {
-								if ($contentBody[$k].length > 0 && $bbcode.length > 0) {
-									$contentBody[$k].insertAtCaret($bbcode);
-								}
-							}
-						}
+						insert_text($bbcode);
 					}
 				});
 			} catch (ex) {
@@ -291,6 +281,12 @@
 		var $select = '.imgur-output-select';
 		var $class = 'select';
 
+		// Polyfill for Element.matches()
+		// https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+		if (!Element.prototype.matches) {
+			Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+		}
+
 		// Hide select
 		if (!$event.target.matches($select)) {
 			$.each($($select), function() {
@@ -311,13 +307,7 @@
 		}
 
 		// Add BBCode to content
-		for (var $k in $contentBody) {
-			if ($contentBody.hasOwnProperty($k)) {
-				if ($contentBody[$k].length > 0 && $bbcode.length > 0) {
-					$contentBody[$k].insertAtCaret($bbcode);
-				}
-			}
-		}
+		insert_text($bbcode);
 	});
 
 	// Show output fields only when needed
@@ -333,18 +323,41 @@
 	// Add generated output in posting editor panel
 	try {
 		if ($imgurStorage.enabled) {
+			var $output = {
+				type: {
+					default: $('#imgur-image').attr('data-output-type'),
+					current: window.localStorage.getItem($imgurStorage.local),
+					allowed: $imgur.config.types.split(',')
+				}
+			};
+
+			// Fallback to default
+			if ($output.type.current === 'null') {
+				$output.type.current = $output.type.default;
+			}
+
+			// Must be allowed
+			if ($output.type.allowed.length > 0 && $output.type.allowed.indexOf($output.type.current) < 0) {
+				// Try image first
+				var $index = $output.type.allowed.indexOf('image');
+
+				// Fallback to first available
+				$index = ($index < 0) ? 0 : $index;
+
+				// Update current value
+				$output.type.current = $output.type.allowed[$index];
+			}
+
 			// Restore user preference
 			if ($('.imgur-output-select').length > 0 &&
-				window.localStorage.getItem($imgurStorage.local) !== null) {
-				$('.imgur-output-select').val(
-					window.localStorage.getItem($imgurStorage.local)
-				);
+				window.localStorage.getItem($imgurStorage.local) !== 'null') {
+				$('.imgur-output-select').val($output.type.current);
 				$('.imgur-output-select').trigger('change');
 			}
 
 			// Delete output if page doesn't have the fields to do so
 			if ($('#imgur-panel .imgur-output-field').length <= 0 &&
-				window.sessionStorage.getItem($imgurStorage.session) !== null) {
+				window.sessionStorage.getItem($imgurStorage.session) !== 'null') {
 				window.sessionStorage.removeItem($imgurStorage.session);
 				return;
 			}

@@ -53,6 +53,10 @@ class main_module
 	 */
 	public function main($id, $mode)
 	{
+		// Load translations
+		$this->language->add_lang('acp/settings', 'alfredoramos/imgur');
+
+		// Form token
 		add_form_key('alfredoramos_imgur');
 
 		switch ($mode)
@@ -87,6 +91,9 @@ class main_module
 		}
 
 		// Assign global template variables
-		$this->template->assign_var('U_ACTION', $this->u_action);
+		$this->template->assign_vars([
+			'U_ACTION' => $this->u_action,
+			'IN_IMGUR_SETTINGS' => true
+		]);
 	}
 }
